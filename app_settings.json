@@ -1,0 +1,12 @@
+{
+  "appname": "OpenGL Application",
+  "default_resolution": {
+    "x": 1024,
+    "y": 768
+  },
+  "fov": 60.0,
+  "AA": {
+    "enabled": true,
+    "samples": 4
+  }
+}
