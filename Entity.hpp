@@ -3,6 +3,7 @@
 #include <functional>
 #include <vector>
 #include "Model.hpp"
+#include "Camera.hpp"
 
 
 class Entity {
@@ -17,16 +18,17 @@ public:
     float gravity = -9.81f;
     bool isGrounded = true;
 
+    Camera* camera;
     Model* model; // optional visual
 
     using Behavior = std::function<void(Entity&, float)>;
     std::vector<Behavior> behaviors;
 
-    Entity(glm::vec3 pos, Model* mdl = nullptr)
-        : position(pos), velocity(0.0f), acceleration(0.0f), model(mdl) {
+    Entity(glm::vec3 pos, Model* mdl = nullptr, Camera* camera = nullptr)
+        : position(pos), velocity(0.0f), acceleration(0.0f), model(mdl), camera(camera){
     }
 
-    Entity() : position(0.0f), model(nullptr), velocity(0.0f), acceleration(0.0f) {}
+    Entity() : position(0.0f), model(nullptr), velocity(0.0f), acceleration(0.0f), camera(nullptr) {}
 
 
     void update(float dt, float groundHeight) {

@@ -20,7 +20,7 @@ public:
     glm::vec3 origin{};
     glm::vec3 orientation{};
     glm::vec3 scale{ 1.0f };
-    ShaderProgram shader;
+    ShaderProgram& shader;
     bool transparent{ false };
     glm::vec3 AABBMin{ FLT_MAX };
     glm::vec3 AABBMax{ -FLT_MAX };
@@ -31,10 +31,10 @@ public:
     glm::mat4 modelMatrix{ 1.0f };  // model matrix for transformations
 
     // constructor: load model from file
-    Model(const std::filesystem::path& filename, ShaderProgram shader) : shader(shader) {
+    Model(const std::filesystem::path& filename, ShaderProgram& shader) : shader(shader) {
         loadModel(filename);
     }
-    Model(ShaderProgram shader) : shader(shader) {};
+    Model(ShaderProgram& shader) : shader(shader) {};
 
     void setPos(const glm::vec3& pos) {
         origin = pos;
@@ -97,36 +97,16 @@ public:
         return getAABBMax().y - getAABBMin().y;
     }
 
-    void draw(const glm::mat4& projection, const glm::mat4& view, const Lights& lights,
-        const glm::vec3& viewPos) {
+    void draw(const glm::mat4& projection, const glm::mat4& view, const glm::vec3& viewPos) {
         updateAABBAndModelMatrix();
 
-        // checks the sizes of spot and point lights
-        // sorts them out and takes the max amount if the size exceeds the limit
-        std::vector<PointLight> closestPointLights;
-        std::vector<SpotLight> closestSpotLights;
-        if (lights.pointLights.size() > MAX_POINT_LIGHTS) {
-            closestPointLights = selectPointLights(lights.pointLights);
-        }
-        else {
-            closestPointLights = lights.pointLights;
-        }
-        if (lights.spotLights.size() >= MAX_SPOT_LIGHTS)
-            closestSpotLights = selectSpotLights(lights.spotLights);
-        else {
-            closestSpotLights = lights.spotLights;
-        }
         for (auto& mesh : meshes) {
-            mesh.draw(projection, view, modelMatrix, viewPos,
-                lights.ambientLight, lights.sun, closestSpotLights, closestPointLights);
+            mesh.draw(projection, view, modelMatrix, viewPos);
         }
     }
 
 private:
 #include <tuple>
-    static constexpr uint MAX_POINT_LIGHTS = 15;
-    static constexpr uint MAX_SPOT_LIGHTS = 15;
-
 
     void loadModel(const std::filesystem::path& path) {
         // load mesh (all meshes) of the model, (in the future: load material of each mesh, load textures...)
@@ -172,39 +152,11 @@ private:
             << "Indices: " << indices.size() << "\n"
             << "Meshes: " << meshes.size() << std::endl;
     }
-
-    std::vector<PointLight> selectPointLights(const std::vector<PointLight>& lights) {
-        // selects n=MAX_POINT_LIGHTS closest to the position of our Model object
-        std::vector<PointLight> sorted = lights;
-        glm::vec3 objectPos = glm::vec3(modelMatrix[3]);
-        std::sort(sorted.begin(), sorted.end(),
-            [objectPos](const PointLight& a, PointLight const& b) {
-                float distA = glm::distance(a.position, objectPos);
-                float distB = glm::distance(b.position, objectPos);
-                return distA < distB;
-            });
-        sorted.resize(MAX_POINT_LIGHTS);
-        return sorted;
-    }
-
-    std::vector<SpotLight> selectSpotLights(const std::vector<SpotLight>& lights) {
-        // selects n=MAX_SPOT_LIGHTS closest to the position of our Model object
-        std::vector<SpotLight> sorted = lights;
-        glm::vec3 objectPos = glm::vec3(modelMatrix[3]);
-        std::sort(sorted.begin(), sorted.end(),
-            [objectPos](const SpotLight& a, SpotLight const& b) {
-                float distA = glm::distance(a.position, objectPos);
-                float distB = glm::distance(b.position, objectPos);
-                return distA < distB;
-            });
-        sorted.resize(MAX_SPOT_LIGHTS);
-        return sorted;
-    }
 };
 
 class Terrain : public Model {
 public:
-    Terrain(ShaderProgram shader) : Model(shader) {
+    Terrain(ShaderProgram& shader) : Model(shader) {
         loadTerrainModel();
         origin = glm::vec3(0.0f, 0.0f, 0.0f);
     };

@@ -39,7 +39,7 @@
 #include "ShaderProgram.hpp"  
 #include "Model.hpp"  
 #include "Mesh.hpp"
-#include "camera.hpp"
+// #include "camera.hpp"
 #include "Lights.hpp"
 #include "Entity.hpp"
 #include "Behavior.hpp"
@@ -112,4 +112,5 @@ private:
 
     void loadConfig();
     void printGLInfo();
+    void applyLights();
 };

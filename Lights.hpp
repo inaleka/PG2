@@ -3,13 +3,14 @@
 #include <vector>
 #include <string>
 #include <GL/glew.h>
+#include "ShaderProgram.hpp"
 
 // Base class for all lights
 struct LightSource {
     glm::vec3 ambient{ 0.1f };
     glm::vec3 diffuse{ 0.8f };
     glm::vec3 specular{ 1.0f };
-    virtual void apply(GLuint shaderID, int index) const = 0;
+    virtual void apply(ShaderProgram& shader, int index) const = 0;
     virtual std::string getType() const = 0;
     virtual ~LightSource() = default;
 };
@@ -28,7 +29,7 @@ struct DirectionalLight : public LightSource {
         specular = spec;
     }
     static DirectionalLight createDefault();
-    void apply(GLuint shaderID, int index) const override;
+    void apply(ShaderProgram& shader, int index) const override;
     std::string getType() const override { return "directional"; }
 };
 
@@ -52,7 +53,7 @@ struct PointLight : public LightSource {
         specular = spec;
     }
     static PointLight createDefault(const glm::vec3& position, const glm::vec3& color);
-    void apply(GLuint shaderID, int index) const override;
+    void apply(ShaderProgram& shader, int index) const override;
     std::string getType() const override { return "point"; }
 };
 
@@ -83,7 +84,7 @@ struct SpotLight : public LightSource {
         specular = spec;
     }
     static SpotLight createDefault(const glm::vec3& pos, const glm::vec3& dir);
-    void apply(GLuint shaderID, int index) const override;
+    void apply(ShaderProgram& shader, int index) const override;
     std::string getType() const override { return "spot"; }
 };
 
@@ -94,7 +95,7 @@ struct AmbientLight {
     explicit AmbientLight(const glm::vec3& color) : color(color) {}
 
     static AmbientLight createDefault(const glm::vec3& color = glm::vec3(0.1f, 0.1f, 0.1f));
-    void apply(GLuint shaderID, int index = 0) const;
+    void apply(ShaderProgram& shader, int index = 0) const;
     std::string getType() const { return "ambient"; }
     ~AmbientLight() = default;
 };

@@ -164,7 +164,7 @@ bool App::init() {
 
     // initial view matrix
     updateProjection();
-    camera.position = glm::vec3(0.0f, 0.0f, 3.0f);
+    camera.position = glm::vec3(0.0f, 4.0f, 3.0f);
     viewMatrix = camera.GetViewMatrix();
 
     // print OpenGL information
@@ -212,13 +212,13 @@ void App::initAssets(void) {
     bool isTransparent = false;
     shader = ShaderProgram("resources/shaders/tex.vert", "resources/shaders/tex.frag");
     terrain = new Terrain{ shader };
-    GLuint texture_terrain = textureInit("resources/textures/tex_256_no_a.png", isTransparent);
+    GLuint texture_terrain = textureInit("resources/textures/moon.png", isTransparent);
 
     terrain->transparent = isTransparent;
     for (auto& mesh : terrain->meshes) {
         mesh.texture_id = texture_terrain;
     }
-    terrain->getHeightOnMap(camera.position, 0.2f);
+    //terrain->getHeightOnMap(camera.position, 0.2f);
     
     //Model skybox("resources/objects/cube.obj", shader);  // загружает mesh из .obj
     //
@@ -287,7 +287,9 @@ void App::initAssets(void) {
     scene.emplace(botName, std::move(botModel));
     auto botModelPtr = &scene.at("bot"); // store pointer for entity
 
-    Entity bot(initPos, botModelPtr);
+    auto cameraPtr = &camera;
+    Entity bot(initPos, botModelPtr, cameraPtr);
+    bot.behaviors.push_back(Behaviors::FollowCamera());
     bot.setSpeed(glm::vec3(0.3f, 0.0f, 0.0f));
     entities.emplace(botName, std::move(bot));
 
@@ -440,6 +442,32 @@ void App::initLights() {
 
 }
 
+void App::applyLights()
+{
+    // Ambient Light
+    lights.ambientLight.apply(shader, 0);
+
+    // Directional light
+    lights.sun.apply(shader, 0);
+
+    // Spotlights
+    int spotIndex = 0;
+    for (const auto& spot : lights.spotLights)
+        spot.apply(shader, spotIndex++);
+
+    // glProgramUniform1i(shaderID, numSpotLoc, spotIndex);
+    shader.setUniform("numSpotLights", spotIndex);
+
+
+    // Point lights
+    int pointIndex = 0;
+    for (const auto& point : lights.pointLights)
+        point.apply(shader, pointIndex++);
+
+    // glProgramUniform1i(shaderID, numPointLoc, pointIndex);
+    shader.setUniform("numPointLights", pointIndex);
+}
+
 
 
 void App::shootProjectile() {
@@ -447,24 +475,38 @@ void App::shootProjectile() {
     glm::vec3 start = camera.position;
     glm::vec3 direction = glm::normalize(camera.front);
     glm::vec3 spawnPos = (start + direction);
+    GLuint texture = textureInit("resources/textures/tex_256.png", isTransparent);
 
-    Entity projectile(spawnPos);
+    Model projectileModel("resources/objects/cube_bullet.obj", shader);
+    projectileModel.transparent = isTransparent;
+    for (auto& mesh : projectileModel.meshes) {
+        mesh.texture_id = texture;
+    }
+    projectileModel.setScale(glm::vec3(0.1f));
+    projectileModel.setPos(spawnPos);
+    std::ostringstream oss;
+    oss << "projectile_" << glfwGetTime();
+    scene.emplace(oss.str(), std::move(projectileModel));
+    auto projectileModelPtr = &scene.at(oss.str()); // store pointer for entity
+
+
+    Entity projectileEntity(spawnPos, projectileModelPtr);
+
+    projectileEntity.setGravity(0);
+    projectileEntity.setSpeed(direction * 0.5f);
+    projectiles.emplace(oss.str(), std::move(projectileEntity));
+
+
+   /* Entity projectile(spawnPos);
     projectile.setGravity(0);
     projectile.setSpeed(direction);
     projectile.model = new Model("resources/objects/cube_lava.obj", shader);
 
-
-    GLuint texture = textureInit("resources/textures/tex_256.png", isTransparent);
-    projectile.model->setScale(glm::vec3(0.1f));
-    projectile.model->setPos(spawnPos);
+    
 
     Particles::spawn(spawnPos, 10);
 
-
-
-    std::ostringstream oss;
-    oss << "projectile_" << glfwGetTime();
-    projectiles[oss.str()] = projectile;
+    projectiles[oss.str()] = projectile;*/
 }
 
 int App::run() {
@@ -562,7 +604,8 @@ int App::run() {
             }
 
             // Delete cube
-            if (glm::length(e.position - camera.position) > 100.0f) {
+            if (glm::length(e.position - camera.position) > 10.0f) {
+                scene.erase(scene.find(it->first));
                 it = projectiles.erase(it);
             }
             else {
@@ -570,11 +613,6 @@ int App::run() {
             }
         }
 
-
-        for (auto& [key, e] : projectiles) {
-            if (e.model)
-                e.model->draw(projectionMatrix, viewMatrix, lights, camera.position);
-        }
 
         /*
          *  --- SCENE RENDERING ---
@@ -584,20 +622,20 @@ int App::run() {
         transparent.reserve(scene.size());  // reserve size for all objects to avoid reallocation
 
         double time = glfwGetTime();
-        float sunAngle = float(time) * 0.3f;
+        float sunAngle = float(time) * 0.2f;
         float daylight = glm::clamp(sin(sunAngle), 0.0f, 1.0f);
         float smoothDay = daylight * daylight;
 
         // Ambient: night / day changes
-        lights.ambientLight.color = glm::vec3(0.2f, 0.2f, 0.25f) + glm::vec3(0.5f, 0.5f, 0.4f) * smoothDay;
+        lights.ambientLight.color = glm::vec3(0.6f, 0.5f, 0.1f) + glm::vec3(0.5f, 0.5f, 0.4f) * smoothDay;
 
         // Sun direction and color
         lights.sun.direction = glm::normalize(glm::vec3(cos(sunAngle), -0.5f, sin(sunAngle)));
 
         // Animate the last spotlight in a circle near the hmap center
         double t = glfwGetTime();
-        float radius = 8.0f; // radius of movement
-        float height = 7.0f; // height above hmap
+        float radius = 2.0f; // radius of movement
+        float height = 4.0f; // height above hmap
         glm::vec3 hmapCenter = glm::vec3(0.0f, 0.0f, 0.0f);
         // Calculate position (X,Z circle, fixed Y)
         glm::vec3 spotPos = hmapCenter + glm::vec3(
@@ -605,6 +643,8 @@ int App::run() {
             height,
             sin(t) * radius
         );
+
+
         // Spotlight points downward
         glm::vec3 spotDir = glm::vec3(0.0f, -1.0f, 0.0f);
         // Update the spotlight in the lights struct
@@ -612,11 +652,14 @@ int App::run() {
         lights.spotLights[movingSpotIndex].direction = spotDir;
         lights.spotLights[movingSpotIndex].ambient = glm::vec3(0.1f, 0.1f, 1.0f);
 
-        terrain->draw(projectionMatrix, viewMatrix, lights, camera.position);
+        // Pass lights to the main shader
+        applyLights();
+
+        terrain->draw(projectionMatrix, viewMatrix, camera.position);
         // Draw all models in the scene
         for (auto& [name, model] : scene) {
             if (!model.transparent) {
-                model.draw(projectionMatrix, viewMatrix, lights, camera.position);
+                model.draw(projectionMatrix, viewMatrix, camera.position);
             }
             else
                 transparent.emplace_back(&model); // save pointer for painters algorithm
@@ -628,7 +671,7 @@ int App::run() {
         glEnable(GL_BLEND);
         glDepthMask(GL_FALSE);
         for (auto p : transparent) {
-            p->draw(projectionMatrix, viewMatrix, lights, camera.position);
+            p->draw(projectionMatrix, viewMatrix, camera.position);
         }
         glDisable(GL_BLEND);
         glDepthMask(GL_TRUE);

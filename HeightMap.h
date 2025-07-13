@@ -11,22 +11,9 @@
 #include "ShaderProgram.hpp"
 
 class HeightMap {
-    glm::vec2 get_subtex_st(const int x, const int y) {
-        return glm::vec2(x * 1.0f / 16, y * 1.0f / 16);
-    }
+private:
+    const int HEIGHT_LEVELS = 16;
 
-    // choose subtexture based on height
-    glm::vec2 get_subtex_by_height(float height) {
-        if (height > 0.9)
-            return get_subtex_st(0, 4); // snow
-        if (height > 0.8)
-            return get_subtex_st(5, 2); // black stone
-        if (height > 0.5)
-            return get_subtex_st(0, 1); // rock
-        if (height > 0.3)
-            return get_subtex_st(2, 0); // soil
-        return get_subtex_st(0, 0); // grass
-    }
 public:
     HeightMap() {};
 
@@ -47,14 +34,14 @@ public:
             std::cerr << "WARN: requested 1 channel, got: " << hmap.channels() << std::endl;
         }
 
-        // Compute min/max for dynamic normalization
+        // Вычисляем min/max для нормализации
         cv::minMaxLoc(hmap, &minVal, &maxVal);
         std::cout << "Heightmap raw min: " << minVal << " max: " << maxVal << std::endl;
 
-        // Avoid division by zero
+        // Избегаем деления на ноль
         double denom = (maxVal - minVal > 1e-5) ? (maxVal - minVal) : 1.0;
 
-        // Center mesh in world space
+        // Центрируем сетку в мировом пространстве
         float x_offset = (hmap.cols - mesh_step_size) / 2.0f;
         float z_offset = (hmap.rows - mesh_step_size) / 2.0f;
 
@@ -63,47 +50,78 @@ public:
             for (unsigned int z_coord = 0; z_coord < (hmap.rows - mesh_step_size); z_coord += mesh_step_size) {
                 std::vector<Vertex> vertices;
                 std::vector<GLuint> indices;
-                // Normalize to [0,1] using image min/max, then center to [-1,1]
+
+                // Получаем высоты для 4 углов квада
                 float h0 = (hmap.at<uchar>(cv::Point(x_coord, z_coord)) - minVal) / denom;
                 float h1 = (hmap.at<uchar>(cv::Point(x_coord + mesh_step_size, z_coord)) - minVal) / denom;
                 float h2 = (hmap.at<uchar>(cv::Point(x_coord + mesh_step_size, z_coord + mesh_step_size)) - minVal) / denom;
                 float h3 = (hmap.at<uchar>(cv::Point(x_coord, z_coord + mesh_step_size)) - minVal) / denom;
 
-                // Center heights to [-1, 1]
-                float ch0 = (h0 - 0.5f) * 2.0f;
-                float ch1 = (h1 - 0.5f) * 2.0f;
-                float ch2 = (h2 - 0.5f) * 2.0f;
-                float ch3 = (h3 - 0.5f) * 2.0f;
+                // Увеличиваем контрастность и применяем нелинейное масштабирование
+                auto enhanceHeight = [](float h) -> float {
+                    // Увеличиваем контраст (сдвигаем к краям)
+                    h = (h - 0.5f) * 2.5f + 0.5f; // увеличиваем контраст в 2.5 раза
+                    h = std::max(0.0f, std::min(1.0f, h)); // ограничиваем [0,1]
 
-                glm::vec3 p0((x_coord - x_offset) * scaleXZ, ch0 * heightScale, (z_coord - z_offset) * scaleXZ);
-                glm::vec3 p1((x_coord + mesh_step_size - x_offset) * scaleXZ, ch1 * heightScale, (z_coord - z_offset) * scaleXZ);
-                glm::vec3 p2((x_coord + mesh_step_size - x_offset) * scaleXZ, ch2 * heightScale, (z_coord + mesh_step_size - z_offset) * scaleXZ);
-                glm::vec3 p3((x_coord - x_offset) * scaleXZ, ch3 * heightScale, (z_coord + mesh_step_size - z_offset) * scaleXZ);
+                    // Применяем степенную функцию для большей чувствительности
+                    h = std::pow(h, 0.7f); // делает переходы более резкими
 
-                float max_h = std::max({ h0, h1, h2, h3 });
+                    return h;
+                    };
 
-                glm::vec2 tc0 = get_subtex_by_height(max_h);
-                glm::vec2 tc1 = tc0 + glm::vec2(1.0f / 16, 0.0f);
-                glm::vec2 tc2 = tc0 + glm::vec2(1.0f / 16, 1.0f / 16);
-                glm::vec2 tc3 = tc0 + glm::vec2(0.0f, 1.0f / 16);
+                h0 = enhanceHeight(h0);
+                h1 = enhanceHeight(h1);
+                h2 = enhanceHeight(h2);
+                h3 = enhanceHeight(h3);
 
-                // normals for both triangles, CCW
-                glm::vec3 n1 = glm::normalize(glm::cross(p1 - p0, p2 - p0)); // for p1
-                glm::vec3 n2 = glm::normalize(glm::cross(p2 - p0, p3 - p0)); // for p3
-                glm::vec3 navg = glm::normalize(n1 + n2);                    // average for p0, p2 - common
+                // Преобразуем в дискретные уровни (0 - HEIGHT_LEVELS-1)
+                int level0 = static_cast<int>(h0 * HEIGHT_LEVELS);
+                int level1 = static_cast<int>(h1 * HEIGHT_LEVELS);
+                int level2 = static_cast<int>(h2 * HEIGHT_LEVELS);
+                int level3 = static_cast<int>(h3 * HEIGHT_LEVELS);
 
-                // place vertices and ST to mesh
+                // Ограничиваем уровни
+                level0 = std::max(0, std::min(level0, HEIGHT_LEVELS - 1));
+                level1 = std::max(0, std::min(level1, HEIGHT_LEVELS - 1));
+                level2 = std::max(0, std::min(level2, HEIGHT_LEVELS - 1));
+                level3 = std::max(0, std::min(level3, HEIGHT_LEVELS - 1));
+
+                // Преобразуем уровни в высоты
+                float discrete_h0 = (level0 / float(HEIGHT_LEVELS - 1)) * 2.0f - 1.0f; // [-1, 1]
+                float discrete_h1 = (level1 / float(HEIGHT_LEVELS - 1)) * 2.0f - 1.0f;
+                float discrete_h2 = (level2 / float(HEIGHT_LEVELS - 1)) * 2.0f - 1.0f;
+                float discrete_h3 = (level3 / float(HEIGHT_LEVELS - 1)) * 2.0f - 1.0f;
+
+                // Позиции вершин
+                glm::vec3 p0((x_coord - x_offset) * scaleXZ, discrete_h0 * heightScale, (z_coord - z_offset) * scaleXZ);
+                glm::vec3 p1((x_coord + mesh_step_size - x_offset) * scaleXZ, discrete_h1 * heightScale, (z_coord - z_offset) * scaleXZ);
+                glm::vec3 p2((x_coord + mesh_step_size - x_offset) * scaleXZ, discrete_h2 * heightScale, (z_coord + mesh_step_size - z_offset) * scaleXZ);
+                glm::vec3 p3((x_coord - x_offset) * scaleXZ, discrete_h3 * heightScale, (z_coord + mesh_step_size - z_offset) * scaleXZ);
+
+                // Текстурные координаты (одинаковые для всех)
+                glm::vec2 tc0(0.0f, 0.0f);
+                glm::vec2 tc1(1.0f, 0.0f);
+                glm::vec2 tc2(1.0f, 1.0f);
+                glm::vec2 tc3(0.0f, 1.0f);
+
+                // Вычисляем нормали для треугольников
+                glm::vec3 n1 = glm::normalize(glm::cross(p1 - p0, p2 - p0)); // для первого треугольника
+                glm::vec3 n2 = glm::normalize(glm::cross(p2 - p0, p3 - p0)); // для второго треугольника
+                glm::vec3 navg = glm::normalize(n1 + n2);                    // средняя для общих вершин
+
+                // Добавляем вершины
                 vertices.emplace_back(Vertex{ p0, navg, tc0 });
                 vertices.emplace_back(Vertex{ p1, n1,   tc1 });
                 vertices.emplace_back(Vertex{ p2, navg, tc2 });
                 vertices.emplace_back(Vertex{ p3, n2,   tc3 });
 
-                // place indices
+                // Добавляем индексы (CCW)
                 size_t base_idx = vertices.size() - 4;
                 indices.insert(indices.end(), {
                     static_cast<GLuint>(base_idx + 2), static_cast<GLuint>(base_idx + 1), static_cast<GLuint>(base_idx + 0),
                     static_cast<GLuint>(base_idx + 3), static_cast<GLuint>(base_idx + 2), static_cast<GLuint>(base_idx + 0)
                     });
+
                 meshes.emplace_back(Mesh(GL_TRIANGLES, shader, vertices, indices,
                     glm::vec3(0.0f), glm::vec3(0.0f)));
             }
@@ -112,18 +130,18 @@ public:
         return meshes;
     }
 
-    // x, z: world-space coordinates
+    // x, z: координаты в мировом пространстве
     float getWorldHeightAt(float x, float z, const cv::Mat& hmap, float heightScale) {
-        // Convert world x,z to heightmap pixel coordinates
-        int mesh_step_size = 30; // whatever you use in mesh generation (e.g. 30)
+        // Преобразуем мировые x,z в координаты пикселей карты высот
+        int mesh_step_size = 30; // тот же размер, что используется при генерации меша
         float x_offset = (hmap.cols - mesh_step_size) / 2.0f;
         float z_offset = (hmap.rows - mesh_step_size) / 2.0f;
 
-        // Convert to image coordinates
+        // Преобразуем в координаты изображения
         int img_x = static_cast<int>(x * mesh_step_size + x_offset);
         int img_z = static_cast<int>(z * mesh_step_size + z_offset);
 
-        // Clamp to valid range
+        // Ограничиваем допустимым диапазоном
         img_x = std::max(0, std::min(img_x, hmap.cols - 1));
         img_z = std::max(0, std::min(img_z, hmap.rows - 1));
 
@@ -131,9 +149,20 @@ public:
         cv::minMaxLoc(hmap, &minVal, &maxVal);
         double denom = (maxVal - minVal > 1e-5) ? (maxVal - minVal) : 1.0;
         float h = (hmap.at<uchar>(cv::Point(img_x, img_z)) - minVal) / denom;
-        float ch = (h - 0.5f) * 2.0f;
-        return ch * heightScale;
+
+        // Применяем то же улучшение высоты
+        h = (h - 0.5f) * 2.5f + 0.5f; // увеличиваем контраст
+        h = std::max(0.0f, std::min(1.0f, h)); // ограничиваем [0,1]
+        h = std::pow(h, 0.7f); // степенная функция
+
+        // Преобразуем в дискретный уровень
+        int level = static_cast<int>(h * HEIGHT_LEVELS);
+        level = std::max(0, std::min(level, HEIGHT_LEVELS - 1));
+
+        // Возвращаем дискретную высоту
+        float discrete_h = (level / float(HEIGHT_LEVELS - 1)) * 2.0f - 1.0f;
+        return discrete_h * heightScale;
     }
 };
 
-#endif HEIGHTMAP_H
+#endif // HEIGHTMAP_H

@@ -43,41 +43,41 @@ AmbientLight AmbientLight::createDefault(const glm::vec3& color) {
 }
 
 // Apply methods for each light type
-void DirectionalLight::apply(GLuint shaderID, int index) const {
+void DirectionalLight::apply(ShaderProgram& shader, int index) const {
     std::string prefix = "dirLights[" + std::to_string(index) + "]";
-    glProgramUniform3fv(shaderID, glGetUniformLocation(shaderID, (prefix + ".direction").c_str()), 1, glm::value_ptr(direction));
-    glProgramUniform3fv(shaderID, glGetUniformLocation(shaderID, (prefix + ".ambient").c_str()), 1, glm::value_ptr(ambient));
-    glProgramUniform3fv(shaderID, glGetUniformLocation(shaderID, (prefix + ".diffuse").c_str()), 1, glm::value_ptr(diffuse));
-    glProgramUniform3fv(shaderID, glGetUniformLocation(shaderID, (prefix + ".specular").c_str()), 1, glm::value_ptr(specular));
+    shader.setUniform(prefix + ".direction", direction);
+    shader.setUniform(prefix + ".ambient", ambient);
+    shader.setUniform(prefix + ".diffuse", diffuse);
+    shader.setUniform(prefix + ".specular", specular);
 }
 
-void PointLight::apply(GLuint shaderID, int index) const {
+void PointLight::apply(ShaderProgram& shader, int index) const {
     std::string prefix = "pointLights[" + std::to_string(index) + "]";
-    glProgramUniform3fv(shaderID, glGetUniformLocation(shaderID, (prefix + ".position").c_str()), 1, glm::value_ptr(position));
-    glProgramUniform3fv(shaderID, glGetUniformLocation(shaderID, (prefix + ".ambient").c_str()), 1, glm::value_ptr(ambient));
-    glProgramUniform3fv(shaderID, glGetUniformLocation(shaderID, (prefix + ".diffuse").c_str()), 1, glm::value_ptr(diffuse));
-    glProgramUniform3fv(shaderID, glGetUniformLocation(shaderID, (prefix + ".specular").c_str()), 1, glm::value_ptr(specular));
-    glProgramUniform1f(shaderID, glGetUniformLocation(shaderID, (prefix + ".constant").c_str()), constant);
-    glProgramUniform1f(shaderID, glGetUniformLocation(shaderID, (prefix + ".linear").c_str()), linear);
-    glProgramUniform1f(shaderID, glGetUniformLocation(shaderID, (prefix + ".quadratic").c_str()), quadratic);
+    shader.setUniform(prefix + ".position", position);
+    shader.setUniform(prefix + ".ambient", ambient);
+    shader.setUniform(prefix + ".diffuse", diffuse);
+    shader.setUniform(prefix + ".specular", specular);
+    shader.setUniform(prefix + ".constant", constant);
+    shader.setUniform(prefix + ".linear", linear);
+    shader.setUniform(prefix + ".quadratic", quadratic);
 }
 
-void SpotLight::apply(GLuint shaderID, int index) const {
+void SpotLight::apply(ShaderProgram& shader, int index) const {
     std::string prefix = "spotLights[" + std::to_string(index) + "]";
-    glProgramUniform3fv(shaderID, glGetUniformLocation(shaderID, (prefix + ".position").c_str()), 1, glm::value_ptr(position));
-    glProgramUniform3fv(shaderID, glGetUniformLocation(shaderID, (prefix + ".direction").c_str()), 1, glm::value_ptr(direction));
-    glProgramUniform1f(shaderID, glGetUniformLocation(shaderID, (prefix + ".cutOff").c_str()), cutOff);
-    glProgramUniform1f(shaderID, glGetUniformLocation(shaderID, (prefix + ".outerCutOff").c_str()), outerCutOff);
-    glProgramUniform3fv(shaderID, glGetUniformLocation(shaderID, (prefix + ".ambient").c_str()), 1, glm::value_ptr(ambient));
-    glProgramUniform3fv(shaderID, glGetUniformLocation(shaderID, (prefix + ".diffuse").c_str()), 1, glm::value_ptr(diffuse));
-    glProgramUniform3fv(shaderID, glGetUniformLocation(shaderID, (prefix + ".specular").c_str()), 1, glm::value_ptr(specular));
-    glProgramUniform1f(shaderID, glGetUniformLocation(shaderID, (prefix + ".constant").c_str()), constant);
-    glProgramUniform1f(shaderID, glGetUniformLocation(shaderID, (prefix + ".linear").c_str()), linear);
-    glProgramUniform1f(shaderID, glGetUniformLocation(shaderID, (prefix + ".quadratic").c_str()), quadratic);
+    shader.setUniform(prefix + ".position", position);
+    shader.setUniform(prefix + ".direction", direction);
+    shader.setUniform(prefix + ".cutOff", cutOff);
+    shader.setUniform(prefix + ".outerCutOff", outerCutOff);
+    shader.setUniform(prefix + ".ambient", ambient);
+    shader.setUniform(prefix + ".diffuse", diffuse);
+    shader.setUniform(prefix + ".specular", specular);
+    shader.setUniform(prefix + ".constant", constant);
+    shader.setUniform(prefix + ".linear", linear);
+    shader.setUniform(prefix + ".quadratic", quadratic);
 }
 
-void AmbientLight::apply(GLuint shaderID, int /*index*/) const {
-    glProgramUniform3fv(shaderID, glGetUniformLocation(shaderID, "ambientLight.color"), 1, glm::value_ptr(color));
+void AmbientLight::apply(ShaderProgram& shader, int /*index*/) const {
+    shader.setUniform("ambientLight.color", color);
 }
 
 

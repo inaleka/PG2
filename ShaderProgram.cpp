@@ -8,8 +8,6 @@
 
 #include "ShaderProgram.hpp"
 
-// set uniform according to name 
-// https://docs.gl/gl4/glUniform
 
 ShaderProgram::ShaderProgram(const std::filesystem::path& VS_file, const std::filesystem::path& FS_file) {
 	std::vector<GLuint> shader_ids;
@@ -22,64 +20,73 @@ ShaderProgram::ShaderProgram(const std::filesystem::path& VS_file, const std::fi
 	ID = link_shader(shader_ids);
 }
 
+GLint ShaderProgram::getUniformLocation(const std::string& name) {
+
+	auto it = uniformCache.find(name);
+	if (it != uniformCache.end()) return it->second;
+
+	GLint location = glGetUniformLocation(ID, name.c_str());
+	if (location == -1) {
+		std::cerr << "Warning: uniform '" << name << "' not found in shader.\n";
+		return location;
+	}
+	uniformCache[name] = location;
+	return location;
+
+}
+
 // set uniform to float
 void ShaderProgram::setUniform(const std::string& name, const float val) {
-	auto loc = glGetUniformLocation(ID, name.c_str()); // get location of uniform
+	auto loc = getUniformLocation(name); // get location of uniform
 	if (loc == -1) {
-		std::cerr << "no uniform with name:" << name << '\n';
 		return;
 	}
-	glUniform1f(loc, val); // set uniform
+	glProgramUniform1f(ID, loc, val);  // set uniform
 }
 
 // set uniform to int
 void ShaderProgram::setUniform(const std::string& name, const int val) {
-	auto loc = glGetUniformLocation(ID, name.c_str()); // get location of uniform
+	auto loc = getUniformLocation(name); // get location of uniform
 	if (loc == -1) {
-		std::cerr << "no uniform with name:" << name << '\n';
 		return;
 	}
-	glUniform1i(loc, val); // set uniform
+	glProgramUniform1i(ID, loc, val); // set uniform
 }
 
 // set uniform to vec3
-void ShaderProgram::setUniform(const std::string& name, const glm::vec3 val) {
-	auto loc = glGetUniformLocation(ID, name.c_str()); // get location of uniform
+void ShaderProgram::setUniform(const std::string& name, const glm::vec3& val) {
+	auto loc = getUniformLocation(name); // get location of uniform
 	if (loc == -1) {
-		std::cerr << "no uniform with name:" << name << '\n';
 		return;
 	}
-	glUniform3fv(loc, 1, glm::value_ptr(val)); // set uniform
+	glProgramUniform3fv(ID, loc, 1, glm::value_ptr(val)); // set uniform
 }
 
 // set uniform to vec4
-void ShaderProgram::setUniform(const std::string& name, const glm::vec4 in_vec4) {
-	auto loc = glGetUniformLocation(ID, name.c_str());  // get location of uniform
+void ShaderProgram::setUniform(const std::string& name, const glm::vec4& in_vec4) {
+	auto loc = getUniformLocation(name);  // get location of uniform
 	if (loc == -1) {
-		std::cerr << "no uniform with name:" << name << '\n';
 		return;
 	}
-	glUniform4fv(loc, 1, glm::value_ptr(in_vec4));  // set uniform
+	glProgramUniform4fv(ID, loc, 1, glm::value_ptr(in_vec4));  // set uniform
 }
 
 // set uniform to mat3
-void ShaderProgram::setUniform(const std::string& name, const glm::mat3 val) {
-	auto loc = glGetUniformLocation(ID, name.c_str());  // get location of uniform
+void ShaderProgram::setUniform(const std::string& name, const glm::mat3& val) {
+	auto loc = getUniformLocation(name);  // get location of uniform
 	if (loc == -1) {
-		std::cerr << "no uniform with name:" << name << '\n';
 		return;
 	}
-	glUniformMatrix3fv(loc, 1, GL_FALSE, glm::value_ptr(val));  // set uniform
+	glProgramUniformMatrix3fv(ID, loc, 1, GL_FALSE, glm::value_ptr(val));  // set uniform
 }
 
 // set uniform to mat4
-void ShaderProgram::setUniform(const std::string& name, const glm::mat4 val) {
-	auto loc = glGetUniformLocation(ID, name.c_str());  // get location of uniform
+void ShaderProgram::setUniform(const std::string& name, const glm::mat4& val) {
+	auto loc = getUniformLocation(name);  // get location of uniform
 	if (loc == -1) {
-		std::cerr << "no uniform with name:" << name << '\n';
 		return;
 	}
-	glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(val));  // set uniform
+	glProgramUniformMatrix4fv(ID, loc, 1, GL_FALSE, glm::value_ptr(val));  // set uniform
 }
 
 // Get shader compilator errors
@@ -103,7 +110,7 @@ std::string ShaderProgram::getProgramInfoLog(const GLuint obj) {
 	std::string infoLog;
 
 	glGetProgramiv(obj, GL_INFO_LOG_LENGTH, &infoLogLength);  // get length of info log
-	
+
 	if (infoLogLength > 0) {
 		std::vector<char> vec(infoLogLength); // create vector of chars with size of info log
 		glGetProgramInfoLog(obj, infoLogLength, NULL, vec.data()); // get info log
@@ -138,7 +145,7 @@ GLuint ShaderProgram::compile_shader(const std::filesystem::path& source_file, c
 			glDeleteShader(shader_h);  // delete shader if compile failed
 			throw std::runtime_error("Shader compile err.\n");
 		}
-	}	
+	}
 
 	return shader_h;
 }
@@ -161,7 +168,7 @@ GLuint ShaderProgram::link_shader(const std::vector<GLuint> shader_ids) {
 			throw std::runtime_error("Shader link err.\n");
 		}
 	}
-	
+
 	// free shaders after linking
 	for (auto const id : shader_ids) {
 		glDetachShader(prog_h, id);  // detach shaders from program

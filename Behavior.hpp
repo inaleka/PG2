@@ -24,6 +24,17 @@ namespace Behaviors {
         };
     }
 
+    inline Behavior FollowCamera() {
+        return [=](Entity& self, float dt) mutable {
+            if (self.camera != nullptr) {
+                if (glm::length(glm::distance(self.camera->position, self.position)) >= 2.0f)
+                    self.setSpeed(glm::normalize(self.camera->position - self.position) * 0.5f);
+                else
+                    self.setSpeed(glm::vec3(0));
+            }
+        };
+    }
+
     // Bob up and down
     inline Behavior Bob(float amplitude = 0.5f, float speed = 1.0f) {
 		std::cout << "Bob behavior initialized with amplitude: " << amplitude << " and speed: " << speed << std::endl;
