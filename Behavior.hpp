@@ -18,10 +18,13 @@ namespace Behaviors {
             };
     }
 
-    inline Behavior FlyUp() {
+    inline Entity::Behavior FlyUp() {
         return [=](Entity& self, float dt) mutable {
-            if (self.position.y <= 8.0f) self.applyForce(glm::vec3(0.0f, 1.0f, 0.0f) * self.movementSpeed);
-        };
+            if (self.position.y <= 1.0f)
+                self.applyForce(glm::vec3(0.0f, 0.3f, 0.0f) * self.movementSpeed * 10.0f);
+
+            self.rotation.y += glm::radians(90.0f) * dt;
+            };
     }
 
     inline Behavior FollowCamera() {

@@ -7,7 +7,7 @@
 namespace Particles {
     struct Particle {
         glm::vec3 position, velocity;
-        float life = 1.0f;
+        float life = 0.7f;
         bool active = false;
     };
 
@@ -30,7 +30,7 @@ namespace Particles {
         for (auto& p : pool) {
             if (!p.active) {
                 p.position = origin;
-                p.velocity = glm::sphericalRand(5.0f);
+                p.velocity = glm::sphericalRand(2.0f);
                 p.life = 0.5f + float(rand()) / RAND_MAX;
                 p.active = true;
                 if (++spawned >= count) break;
@@ -46,6 +46,7 @@ namespace Particles {
         for (const auto& p : pool) {
             if (p.active) {
                 points.push_back(p.position);
+                points.push_back(p.position + p.velocity * 0.1f);
             }
         }
 
@@ -75,12 +76,12 @@ namespace Particles {
         GLint locColor = glGetUniformLocation(programID, "color");
 
         glProgramUniformMatrix4fv(programID, locMVP, 1, GL_FALSE, &mvp[0][0]);
-        glProgramUniform4f(programID, locColor, 1.0f, 0.7f, 0.2f, 1.0f); // orange
+        glProgramUniform4f(programID, locColor, 1.0f, 0.5f, 0.0f, 1.0f); 
 
         glEnable(GL_PROGRAM_POINT_SIZE);
-        glPointSize(5.0f);
+        glLineWidth(3.5f);
         glBindVertexArray(VAO);
-        glDrawArrays(GL_POINTS, 0, static_cast<GLsizei>(points.size()));
+        glDrawArrays(GL_LINES, 0, static_cast<GLsizei>(points.size()));
         glBindVertexArray(0);
 
         // Cleanup

@@ -11,6 +11,7 @@ public:
     glm::vec3 position;
     glm::vec3 velocity;
     glm::vec3 acceleration;
+    glm::vec3 rotation = glm::vec3(0.0f);
 
     float yaw = -90.0f, pitch = 0.0f;
     float movementSpeed = 10.0f;
@@ -52,7 +53,10 @@ public:
             isGrounded = false;
         }
         acceleration = glm::vec3(0.0f);
-        if (model) model->setPos(position);
+        if (model) {
+            model->setPos(position);
+            model->setRotation(rotation); 
+        }
     }
 
     void applyForce(const glm::vec3& force) { acceleration += force; }

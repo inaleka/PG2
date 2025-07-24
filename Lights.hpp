@@ -7,16 +7,16 @@
 
 // Base class for all lights
 struct LightSource {
-    glm::vec3 ambient{ 0.1f };
-    glm::vec3 diffuse{ 0.8f };
-    glm::vec3 specular{ 1.0f };
+    glm::vec3 ambient{ 0.9f };
+    glm::vec3 diffuse{ 0.6f };
+    glm::vec3 specular{ 2.0f };
     virtual void apply(ShaderProgram& shader, int index) const = 0;
     virtual std::string getType() const = 0;
     virtual ~LightSource() = default;
 };
 
 struct DirectionalLight : public LightSource {
-    glm::vec3 direction{ -0.2f, -1.0f, -0.3f };
+    glm::vec3 direction{ -0.6f, -1.2f, -0.7f };
     DirectionalLight() = default;
     DirectionalLight(const glm::vec3& dir,
         const glm::vec3& amb,
@@ -36,7 +36,7 @@ struct DirectionalLight : public LightSource {
 struct PointLight : public LightSource {
     glm::vec3 position{ 0.0f };
     float constant{ 1.0f };
-    float linear{ 0.09f };
+    float linear{ 0.1f };
     float quadratic{ 0.032f };
     PointLight() = default;
     PointLight(const glm::vec3& pos,
@@ -60,8 +60,8 @@ struct PointLight : public LightSource {
 struct SpotLight : public LightSource {
     glm::vec3 position{ 0.0f };
     glm::vec3 direction{ 0.0f, 0.0f, -1.0f };
-    float cutOff{ glm::cos(glm::radians(12.5f)) };
-    float outerCutOff{ glm::cos(glm::radians(17.5f)) };
+    float cutOff{ glm::cos(glm::radians(16.0f)) };
+    float outerCutOff{ glm::cos(glm::radians(20.9f)) };
     float constant{ 1.0f };
     float linear{ 0.09f };
     float quadratic{ 0.032f };
@@ -89,12 +89,12 @@ struct SpotLight : public LightSource {
 };
 
 struct AmbientLight {
-    glm::vec3 color{ 0.1f, 0.1f, 0.1f };
+    glm::vec3 color{ 0.5f, 0.4f, 0.1f };
 
     AmbientLight() = default;
     explicit AmbientLight(const glm::vec3& color) : color(color) {}
 
-    static AmbientLight createDefault(const glm::vec3& color = glm::vec3(0.1f, 0.1f, 0.1f));
+    static AmbientLight createDefault(const glm::vec3& color = glm::vec3(0.5f, 0.4f, 0.1f));
     void apply(ShaderProgram& shader, int index = 0) const;
     std::string getType() const { return "ambient"; }
     ~AmbientLight() = default;
@@ -109,5 +109,5 @@ struct Lights {
     void initDirectionalLight();
     void initPointLight(const glm::vec3& position, const glm::vec3& color);
     void initSpotLight(const glm::vec3& pos, const glm::vec3& dir);
-    void initAmbientLight(const glm::vec3& color = glm::vec3(0.1f, 0.1f, 0.1f));
+    void initAmbientLight(const glm::vec3& color = glm::vec3(0.5f, 0.4f, 0.1f));
 };

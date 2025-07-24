@@ -41,6 +41,11 @@ public:
         transformed = true;
     }
 
+    void setRotation(const glm::vec3& rot) {
+        orientation = rot;
+        transformed = true;
+    }
+
     void setOrientation(const glm::vec3& orientation) {
         this->orientation = orientation;
         transformed = true;

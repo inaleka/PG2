@@ -15,7 +15,7 @@ PointLight PointLight::createDefault(const glm::vec3& position, const glm::vec3&
     return PointLight(
         position,                // position
         color * 0.1f,            // ambient
-        color * 0.8f,            // diffuse
+        color * 0.2f,            // diffuse
         glm::vec3(1.0f),         // specular
         1.0f,                    // constant  
         0.0f,                    // linear    

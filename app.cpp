@@ -108,7 +108,7 @@ void App::printGLInfo() {
 }
 
 bool App::init() {
-	// initialize GLFW window hints
+    // initialize GLFW window hints
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
 
@@ -116,7 +116,7 @@ bool App::init() {
     glDisable(GL_CULL_FACE);                    // отключить отсечение граней
 
 
-    
+
 
     glDepthMask(GL_TRUE);
     glEnable(GL_CULL_FACE);
@@ -200,7 +200,7 @@ bool App::init() {
         std::cerr << "Asset initialization failed: " << e.what() << std::endl;
         return false;
     }
-    glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glDepthFunc(GL_LEQUAL);
     return true;
 }
@@ -219,7 +219,7 @@ void App::initAssets(void) {
         mesh.texture_id = texture_terrain;
     }
     //terrain->getHeightOnMap(camera.position, 0.2f);
-    
+
     //Model skybox("resources/objects/cube.obj", shader);  // загружает mesh из .obj
     //
     //skybox.setScale(glm::vec3(100.0f));
@@ -236,41 +236,43 @@ void App::initAssets(void) {
 
     //scene.emplace("skybox", skybox);
 
-    /*
-     * Triangle init
-     */
-    glm::vec3 initPos = glm::vec3(2.0f, 0.0f, 0.0f);
     isTransparent = true;
-
-    // load model
-    Model triangleModel1("resources/objects/triangle.obj", shader);
-    terrain->getHeightOnMap(initPos, triangleModel1.getHeight() / 2.0f);
-    triangleModel1.setPos(initPos);  // center the model
-
-    // load texture
     GLuint texture = textureInit("resources/textures/tex_256.png", isTransparent);
-    triangleModel1.transparent = isTransparent;
-    // assign all textures to all meshes
-    for (auto& mesh : triangleModel1.meshes) {
+
+    glm::vec3 initPos = glm::vec3(2.0f, 7.0f, 0.0f);
+    Model donut("resources/objects/cube_donut.obj", shader);
+    terrain->getHeightOnMap(initPos, donut.getHeight() / 2.0f);
+    donut.setPos(initPos);
+    donut.transparent = isTransparent;
+    for (auto& mesh : donut.meshes) {
         mesh.texture_id = texture;
     }
+    std::string donutName = "donut";
+    scene.emplace(donutName, std::move(donut));
+    auto DonutBotModelPtr = &scene.at(donutName);
 
-    // add to scene
-    scene.emplace("triangle1", std::move(triangleModel1));
+    Entity donutEntity(initPos, DonutBotModelPtr);
+    donutEntity.behaviors.push_back(Behaviors::FlyUp());
+    donutEntity.setSpeed(glm::vec3(0.0f, 0.0f, 0.0f));
+    entities.emplace(donutName, std::move(donutEntity));
 
-    initPos = glm::vec3(-2.0f, 0.0f, 0.0f);
-    Model torchModel("resources/objects/torch.obj", shader);
-    terrain->getHeightOnMap(initPos, torchModel.getHeight() / 2.0f);
-    torchModel.setPos(initPos);  // center the model
 
-    torchModel.transparent = isTransparent;
-    // assign all textures to all meshes
-    for (auto& mesh : torchModel.meshes) {
+    initPos = glm::vec3(-2.0f, -4.0f, 0.0f);
+    Model star("resources/objects/cube_star.obj", shader);
+    terrain->getHeightOnMap(initPos, star.getHeight() / 2.0f);
+    star.setPos(initPos);
+    star.transparent = isTransparent;
+    for (auto& mesh : star.meshes) {
         mesh.texture_id = texture;
     }
+    std::string starName = "star";
+    scene.emplace(starName, std::move(star));
+    auto StarBotModelPtr = &scene.at(starName);
 
-    // add to scene
-    scene.emplace("torch", std::move(torchModel));
+    Entity StarEntity(initPos, StarBotModelPtr);
+    StarEntity.behaviors.push_back(Behaviors::FlyUp());
+    StarEntity.setSpeed(glm::vec3(0.0f, 0.0f, 0.0f));
+    entities.emplace(starName, std::move(StarEntity));
 
     /*
      * Entities and particles init
@@ -293,8 +295,8 @@ void App::initAssets(void) {
     bot.setSpeed(glm::vec3(0.3f, 0.0f, 0.0f));
     entities.emplace(botName, std::move(bot));
 
-    Model botModel1("resources/objects/cube_lava.obj", shader);
-    initPos = glm::vec3{ 0.0f, 0.0f, -3.0f };
+    Model botModel1("resources/objects/cube_star.obj", shader);
+    initPos = glm::vec3{ 2.0f, 2.0f, -3.0f };
     terrain->getHeightOnMap(initPos, botModel1.getHeight() / 2.0f);
     botModel1.transparent = isTransparent;
     for (auto& mesh : botModel1.meshes) {
@@ -431,6 +433,11 @@ void App::initLights() {
         lights.initSpotLight(glm::vec3(posX, posY, posZ),
             glm::vec3(dirX, dirY, dirZ));
     }
+
+    for (auto& spot : lights.spotLights) {
+        spot.ambient = glm::vec3(0.6f, 0.3f, 0.9f); 
+    }
+
     file_spot_light.close();
 
     // directional light
@@ -497,16 +504,16 @@ void App::shootProjectile() {
     projectiles.emplace(oss.str(), std::move(projectileEntity));
 
 
-   /* Entity projectile(spawnPos);
-    projectile.setGravity(0);
-    projectile.setSpeed(direction);
-    projectile.model = new Model("resources/objects/cube_lava.obj", shader);
+    /* Entity projectile(spawnPos);
+     projectile.setGravity(0);
+     projectile.setSpeed(direction);
+     projectile.model = new Model("resources/objects/cube_lava.obj", shader);
 
-    
 
-    Particles::spawn(spawnPos, 10);
 
-    projectiles[oss.str()] = projectile;*/
+     Particles::spawn(spawnPos, 10);
+
+     projectiles[oss.str()] = projectile;*/
 }
 
 int App::run() {
@@ -599,7 +606,7 @@ int App::run() {
 
                 if (index < lights.pointLights.size()) {
                     lights.pointLights[index].position = e.position;
-                 ++index;
+                    ++index;
                 }
             }
 
@@ -627,15 +634,15 @@ int App::run() {
         float smoothDay = daylight * daylight;
 
         // Ambient: night / day changes
-        lights.ambientLight.color = glm::vec3(0.6f, 0.5f, 0.1f) + glm::vec3(0.5f, 0.5f, 0.4f) * smoothDay;
+        lights.ambientLight.color = glm::vec3(0.4f, 0.3f, 0.1f) + glm::vec3(0.8f, 0.6f, 0.2f) * smoothDay;
 
         // Sun direction and color
         lights.sun.direction = glm::normalize(glm::vec3(cos(sunAngle), -0.5f, sin(sunAngle)));
 
         // Animate the last spotlight in a circle near the hmap center
         double t = glfwGetTime();
-        float radius = 2.0f; // radius of movement
-        float height = 4.0f; // height above hmap
+        float radius = 6.0f; // radius of movement
+        float height = 8.0f; // height above hmap
         glm::vec3 hmapCenter = glm::vec3(0.0f, 0.0f, 0.0f);
         // Calculate position (X,Z circle, fixed Y)
         glm::vec3 spotPos = hmapCenter + glm::vec3(
@@ -646,11 +653,11 @@ int App::run() {
 
 
         // Spotlight points downward
-        glm::vec3 spotDir = glm::vec3(0.0f, -1.0f, 0.0f);
+        glm::vec3 spotDir = glm::vec3(0.0f, -5.0f, 0.0f);
         // Update the spotlight in the lights struct
         lights.spotLights[movingSpotIndex].position = spotPos;
         lights.spotLights[movingSpotIndex].direction = spotDir;
-        lights.spotLights[movingSpotIndex].ambient = glm::vec3(0.1f, 0.1f, 1.0f);
+        lights.spotLights[movingSpotIndex].ambient = glm::vec3(0.8f, 0.6f, 0.4f);
 
         // Pass lights to the main shader
         applyLights();
@@ -701,7 +708,7 @@ int App::run() {
 
     }
     return EXIT_SUCCESS;
-    
+
 }
 
 
@@ -727,7 +734,7 @@ void App::toggleFullscreen() {
         glfwSetWindowMonitor(window, nullptr, savedX, savedY, savedWidth, savedHeight, 0);
         isFullscreen = false;
     }
-    
+
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
     windowWidth = width;
@@ -781,7 +788,8 @@ void App::key_callback(GLFWwindow* window, int key, int scancode, int action, in
             if (!app->AA) {
                 glEnable(GL_MULTISAMPLE);
                 app->AA = true;
-            } else {
+            }
+            else {
                 glDisable(GL_MULTISAMPLE);
                 app->AA = false;
             };
